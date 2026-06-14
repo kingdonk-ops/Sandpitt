@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sandpitt Link Research Catalog</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d2e;
+    --surface2: #242740;
+    --border: #2e3250;
+    --accent: #6c63ff;
+    --accent2: #00d4aa;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --high: #22c55e;
+    --medium: #f59e0b;
+    --low: #64748b;
+    --none: #ef4444;
+    --tag-bg: #1e2235;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* Header */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .logo { font-size: 18px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .logo span { color: var(--accent2); }
+  .search-wrap { flex: 1; min-width: 200px; position: relative; }
+  .search-wrap input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px 8px 36px; border-radius: 8px; font-size: 14px; outline: none; }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); width: 16px; height: 16px; }
+  .header-stats { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .header-stats strong { color: var(--accent2); }
+
+  /* Layout */
+  .layout { display: flex; height: calc(100vh - 57px); }
+
+  /* Sidebar */
+  .sidebar { width: 220px; min-width: 220px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 12px 0; }
+  .sidebar-section { padding: 8px 16px 4px; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+  .filter-btn { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 7px 16px; font-size: 13px; color: var(--muted); background: none; border: none; cursor: pointer; text-align: left; border-left: 3px solid transparent; transition: all .15s; }
+  .filter-btn:hover { background: var(--surface2); color: var(--text); }
+  .filter-btn.active { background: var(--surface2); color: var(--text); border-left-color: var(--accent); }
+  .filter-btn .count { background: var(--surface2); color: var(--muted); font-size: 11px; padding: 1px 6px; border-radius: 10px; }
+  .filter-btn.active .count { background: var(--accent); color: #fff; }
+  .divider { height: 1px; background: var(--border); margin: 8px 16px; }
+  .rel-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+  /* Main */
+  .main { flex: 1; overflow-y: auto; padding: 20px; }
+  .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+  .results-count { font-size: 14px; color: var(--muted); }
+  .sort-select { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 13px; cursor: pointer; outline: none; }
+
+  /* Cards Grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; transition: border-color .15s, transform .15s; cursor: default; }
+  .card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.3; }
+  .card-title a { color: inherit; text-decoration: none; }
+  .card-title a:hover { color: var(--accent); }
+  .rel-badge { flex-shrink: 0; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+  .rel-very-high { background: #14532d; color: #4ade80; }
+  .rel-high { background: #14532d55; color: var(--high); }
+  .rel-medium { background: #78350f55; color: var(--medium); }
+  .rel-low { background: #1e293b; color: var(--low); }
+  .rel-none { background: #450a0a55; color: var(--none); }
+
+  .card-summary { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .card-summary.expanded { /* no clip */ }
+  .card-summary.collapsed { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .expand-btn { font-size: 11px; color: var(--accent); background: none; border: none; cursor: pointer; padding: 0; }
+
+  .card-footer { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+  .cat-tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; background: var(--tag-bg); color: var(--accent); border: 1px solid var(--border); }
+  .os-badge { font-size: 11px; padding: 2px 7px; border-radius: 6px; background: #1a2e1a; color: #4ade80; }
+  .copy-btn { margin-left: auto; font-size: 11px; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; cursor: pointer; transition: all .15s; }
+  .copy-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .copy-btn.copied { color: var(--high); border-color: var(--high); }
+
+  .how-to { font-size: 12px; color: var(--accent2); background: #0d2a25; border: 1px solid #1a4a3a; border-radius: 6px; padding: 5px 10px; font-family: monospace; }
+
+  .empty { text-align: center; padding: 80px 20px; color: var(--muted); }
+  .empty h3 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Sandpitt <span>Link Catalog</span></div>
+  <div class="search-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="search" type="text" placeholder="Search by name, summary, or URL…" autocomplete="off">
+  </div>
+  <div class="header-stats">Showing <strong id="shown-count">0</strong> of <strong id="total-count">0</strong> links</div>
+</div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main">
+    <div class="results-header">
+      <div class="results-count" id="results-label"></div>
+      <select class="sort-select" id="sort-select">
+        <option value="default">Sort: Default</option>
+        <option value="rel-desc">Sort: Relevance ↓</option>
+        <option value="az">Sort: A → Z</option>
+        <option value="cat">Sort: Category</option>
+      </select>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" style="display:none"><h3>No results found</h3><p>Try a different search or filter.</p></div>
+  </main>
+</div>
+
+<script>
+const REL_ORDER = { 'Very High': 4, 'High': 3, 'Medium': 2, 'Low': 1, 'None': 0 };
+
+const LINKS = [
+  // ── CATEGORY 1: Claude Plugins, Skills & Agents ──────────────────────────
+  { name:"Claude Plugins Marketplace", url:"https://claude.com/plugins", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Official directory of Claude plugins and skills. Browse, enable, and discover plugins to extend Claude's capabilities in Claude.ai.", howto:"Claude.ai → Customize → Skills/Plugins" },
+  { name:"Claude Playground Plugin", url:"https://claude.com/plugins/playground", cat:"Claude Plugins & Skills", rel:"Medium", os:false, summary:"Interactive sandbox for experimenting with Claude's capabilities, testing prompts, and exploring plugin behaviors in real time.", howto:"Claude.ai → Plugins → Playground" },
+  { name:"Obra Superpowers Plugin", url:"https://claude.com/plugins/superpowers", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Anthropic's 'Superpowers' skill collection — a curated bundle of productivity and development sub-skills: brainstorming, code review, writing, and analysis modes.", howto:"Claude.ai → Customize → Skills → Enable Superpowers" },
+  { name:"Code Review Plugin (Official)", url:"https://claude.com/plugins/code-review", cat:"Claude Plugins & Skills", rel:"Very High", os:false, summary:"Anthropic's official Code Review plugin — structured code analysis, security review, style checks, and feedback generation. Directly applicable to FastAPI + Next.js code.", howto:"Claude.ai → Customize → Skills → Enable Code Review; invoke via /code-review" },
+  { name:"Claude Resources & Tutorials", url:"https://claude.com/resources/tutorials", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Official tutorials covering how to use Claude features, plugins, connectors, agents, and Claude Code.", howto:"Visit page to browse tutorials" },
+  { name:"Obra Superpowers — Brainstorming", url:"https://www.claudepluginhub.com/skills/obra-superpowers-2/brainstorming", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Sub-skill from the Superpowers pack. Structured brainstorming mode that helps generate and evaluate ideas systematically — useful for system design and feature planning.", howto:"/brainstorm [topic] in Claude Code" },
+  { name:"Obra Superpowers 2 (Hub)", url:"https://www.claudepluginhub.com/plugins/obra-superpowers-2", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Comprehensive Claude Code skill pack including brainstorming, code review, writing assistant, research, and analysis. A meta-collection of productivity sub-skills.", howto:"Install to CLAUDE.md; invoke specific sub-skills by name" },
+  { name:"Anthropic Essentials Plugin", url:"https://www.claudepluginhub.com/plugins/anthropics-anthropic-essentials", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Core utility plugin from Anthropic containing foundational capabilities for coding, reasoning, and writing. Baseline skill set for effective Claude Code usage.", howto:"Enabled by default in Claude Code" },
+  { name:"Code Review Plugin v2", url:"https://www.claudepluginhub.com/plugins/anthropics-code-review-plugins-code-review-2", cat:"Claude Plugins & Skills", rel:"Very High", os:false, summary:"Enhanced code review skill — security analysis, code smell detection, PR readiness checks, refactoring suggestions. More comprehensive than the basic version.", howto:"/code-review or via Claude Code session" },
+  { name:"Feature Dev Plugin v2", url:"https://www.claudepluginhub.com/plugins/anthropics-feature-dev-plugins-feature-dev-2", cat:"Claude Plugins & Skills", rel:"Very High", os:false, summary:"End-to-end feature development workflow: spec writing → implementation planning → code generation → testing → documentation in a structured pipeline.", howto:"/feature-dev [feature description]" },
+  { name:"CLAUDE.md Management Plugin", url:"https://www.claudepluginhub.com/plugins/anthropics-claude-md-management-plugins-claude-md-management", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Automates maintenance and updates to CLAUDE.md project context files. Keeps project documentation in sync as code evolves.", howto:"/update-claude-md or automated via hooks" },
+  { name:"Playwright Plugin", url:"https://www.claudepluginhub.com/plugins/anthropics-playwright-external-plugins-playwright", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Browser automation skill via Playwright — enables Claude to navigate websites, fill forms, take screenshots, and run E2E tests against the admin UI and mobile web views.", howto:"/playwright [action] or via MCP server config" },
+  { name:"Fullstack Dev Skills (jeffallan)", url:"https://www.claudepluginhub.com/plugins/jeffallan-fullstack-dev-skills", cat:"Claude Plugins & Skills", rel:"Very High", os:false, summary:"Community-built plugin covering full-stack development patterns, API design, database modeling, and frontend-backend integration. Covers the entire Sandpitt stack.", howto:"Install via plugin settings; use contextually" },
+  { name:"Agent Skills (Addy Osmani)", url:"https://www.claudepluginhub.com/plugins/addyosmani-agent-skills", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Plugin by Addy Osmani (Google Chrome team) featuring agent-oriented development patterns, performance-conscious coding, and web best practices.", howto:"Install to project; invoke by asking Claude" },
+  { name:"Everything Claude Code (affaan-m)", url:"https://www.claudepluginhub.com/plugins/affaan-m-everything-claude-code", cat:"Claude Plugins & Skills", rel:"Very High", os:false, summary:"Comprehensive plugin pack covering all major Claude Code use cases — architecture, testing, deployment, and documentation. A broad skill set for full development workflows.", howto:"Install via CLAUDE.md; use contextually" },
+  { name:"Caveman Plugin", url:"https://www.claudepluginhub.com/plugins/juliusbrussee-caveman", cat:"Claude Plugins & Skills", rel:"Medium", os:false, summary:"Simplicity-focused plugin that strips over-engineering and promotes plain, direct coding solutions. Pushes back against unnecessary abstraction.", howto:"Add to project context; influences Claude's default coding style" },
+  { name:"Impeccable Plugin", url:"https://www.claudepluginhub.com/plugins/pbakaus-impeccable", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Code quality enforcement plugin — enforces consistent style, standards, naming conventions, and best practices across the codebase.", howto:"Install to project; used during all code generation" },
+  { name:"UI/UX Pro Max Plugin", url:"https://www.claudepluginhub.com/plugins/nextlevelbuilder-ui-ux-pro-max", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Design-focused skill for generating polished, accessible, and user-friendly UI components. Follows modern UX patterns and design systems.", howto:"/ui-design [component] or contextual" },
+  { name:"ClaudePluginHub — Agents Directory", url:"https://www.claudepluginhub.com/agents", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Browse all available Claude Code agents — preconfigured role-based AI assistants for specific development tasks like refactoring, planning, and architecture.", howto:"Browse and copy agent definitions to CLAUDE.md" },
+  { name:"MCP Servers Directory", url:"https://www.claudepluginhub.com/mcp-servers", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Lists available Model Context Protocol (MCP) servers — external tools/services that Claude can connect to for extended capabilities (databases, APIs, file systems).", howto:"Browse to find MCP servers for PostgreSQL, MinIO, etc." },
+  { name:"Docker Technology Integration", url:"https://www.claudepluginhub.com/technologies/docker", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Docker-specific Claude plugins and agents for containerization, compose file generation, Dockerfile best practices, and Docker-based deployments.", howto:"Relevant for Sandpitt's docker-compose setup" },
+  { name:"Obsidian Technology Integration", url:"https://www.claudepluginhub.com/technologies/obsidian", cat:"Claude Plugins & Skills", rel:"Medium", os:false, summary:"Plugins connecting Claude to Obsidian knowledge bases — enables Claude to read/write notes, search knowledge graphs, and use vault content as context.", howto:"Install Obsidian MCP server; connect Claude to vault" },
+  { name:"Curated Marketplace (jmagar)", url:"https://www.claudepluginhub.com/marketplaces/jmagar-curated-marketplace", cat:"Claude Plugins & Skills", rel:"Medium", os:false, summary:"Community-curated selection of highest-quality plugins and MCP servers, vetted by jmagar. Saves time browsing the full directory.", howto:"Browse for quality-filtered plugins" },
+
+  // ── Claude Agents ──
+  { name:"Agent: Refactor Cleaner", url:"https://www.claudepluginhub.com/agents/burgebj-everything-claude-code-2/agents/refactor-cleaner", cat:"Claude Agents", rel:"High", os:false, summary:"Dedicated agent for cleaning up technical debt — renames variables, removes duplication, simplifies logic, and restructures without changing behavior.", howto:"Activate in session or via /refactor" },
+  { name:"Agent: Doc Updater", url:"https://www.claudepluginhub.com/agents/burgebj-everything-claude-code-2/agents/doc-updater", cat:"Claude Agents", rel:"High", os:false, summary:"Keeps documentation synchronized with code changes. Automatically updates README files, API docs, and inline comments when code is modified.", howto:"/doc-update or trigger via hooks" },
+  { name:"Agent: Database Reviewer", url:"https://www.claudepluginhub.com/agents/burgebj-everything-claude-code-2/agents/database-reviewer", cat:"Claude Agents", rel:"Very High", os:false, summary:"Specialized agent for reviewing database schemas, migrations, query performance, and data modeling decisions. Critical for PostgreSQL + PostGIS schema.", howto:"/db-review" },
+  { name:"Agent: Backend Architect", url:"https://www.claudepluginhub.com/agents/sumeet138-data-engineering-plugins-data-engineering/agents/backend-architect", cat:"Claude Agents", rel:"Very High", os:false, summary:"Systems design agent for backend architecture — designs API structures, data pipelines, service boundaries, and infrastructure topology.", howto:"Invoke when designing new backend features" },
+  { name:"Agent: Code Architect (Anthropic)", url:"https://www.claudepluginhub.com/agents/anthropics-feature-dev-plugins-feature-dev-2/agents/code-architect", cat:"Claude Agents", rel:"Very High", os:false, summary:"Official Anthropic agent for software architecture — evaluates design patterns, defines module boundaries, and creates implementation blueprints.", howto:"Invoke before starting new features" },
+  { name:"Agent: Frontend Developer", url:"https://www.claudepluginhub.com/agents/wshobson-frontend-mobile-development-plugins-frontend-mobile-development-2/agents/frontend-developer", cat:"Claude Agents", rel:"Very High", os:false, summary:"Specialized agent for frontend/mobile development — React Native, Next.js, TypeScript, component design, and state management.", howto:"Activate when working on admin or mobile app" },
+  { name:"Agent: Performance Optimizer", url:"https://www.claudepluginhub.com/agents/burgebj-everything-claude-code-2/agents/performance-optimizer", cat:"Claude Agents", rel:"High", os:false, summary:"Analyzes and optimizes code performance — database queries, API response times, bundle sizes, render cycles, and memory usage.", howto:"/perf-optimize [area]" },
+  { name:"Agent: Code Reviewer", url:"https://www.claudepluginhub.com/agents/burgebj-everything-claude-code-2/agents/code-reviewer", cat:"Claude Agents", rel:"Very High", os:false, summary:"Peer-review style code analysis agent — checks for bugs, security issues, anti-patterns, and improvement opportunities before merges.", howto:"/review or via PR hooks" },
+  { name:"Agent: Planner", url:"https://www.claudepluginhub.com/agents/burgebj-everything-claude-code-2/agents/planner", cat:"Claude Agents", rel:"Very High", os:false, summary:"Creates structured implementation plans for features — breaks work into tasks, identifies dependencies, estimates complexity, and sequences development steps.", howto:"Invoke before starting any new feature" },
+  { name:"Agent: GAN Planner", url:"https://www.claudepluginhub.com/agents/burgebj-everything-claude-code-2/agents/gan-planner", cat:"Claude Agents", rel:"High", os:false, summary:"Advanced planning agent using Generate-Analyze-Next iterative refinement to create multi-stage development plans that improve through feedback loops.", howto:"Use for complex multi-component features" },
+
+  // ── MCP Market ──
+  { name:"Task Management Skill (MCPMarket)", url:"https://mcpmarket.com/tools/skills/task-management-for-claude-code", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"MCP skill that adds structured task tracking inside Claude Code — create, assign, track, and complete tasks during development sessions.", howto:"Install via MCP config; use task commands in Claude Code" },
+  { name:"App Builder Templates (MCPMarket)", url:"https://mcpmarket.com/tools/skills/app-builder-templates", cat:"Claude Plugins & Skills", rel:"High", os:false, summary:"Pre-built application scaffolding templates for rapid development starts — API services, full-stack apps, mobile apps, and admin panels.", howto:"Install and use template commands to scaffold new modules" },
+
+  // ── CATEGORY 2: Claude Connectors ────────────────────────────────────────
+  { name:"Claude Connectors Directory", url:"https://claude.com/connectors", cat:"Claude Connectors", rel:"High", os:false, summary:"Official directory of Claude data connectors — integrates Google Drive, Slack, GitHub, Jira, Confluence, and more directly into Claude chats for real-time context.", howto:"Claude.ai → Customize → Connectors → Enable" },
+  { name:"Connector Settings UI", url:"https://claude.ai/customize/connectors", cat:"Claude Connectors", rel:"High", os:false, summary:"Personal settings page for enabling/disabling and authenticating Claude connectors. Manage which services Claude can access in your conversations.", howto:"Open in Claude.ai browser" },
+  { name:"Skills Settings UI", url:"https://claude.ai/customize/skills", cat:"Claude Connectors", rel:"High", os:false, summary:"Personal settings page for enabling/disabling Claude skills and custom skill packs. Manage active skills for development work.", howto:"Open in Claude.ai browser" },
+  { name:"Railway × Claude Agent", url:"https://railway.com/agents/claude", cat:"Claude Connectors", rel:"Medium", os:false, summary:"Railway's native Claude Code integration — Claude can deploy apps, manage services, configure environments, and interact with Railway infrastructure via natural language.", howto:"railway setup agent -y in terminal" },
+  { name:"Railway Claude Code Plugin Docs", url:"https://docs.railway.com/ai/claude-code-plugin", cat:"Claude Connectors", rel:"Medium", os:false, summary:"Official documentation for the Railway Claude Code plugin — authentication, commands, and what Claude can do with Railway (deploy, logs, domains, env vars).", howto:"Read docs; configure MCP in Claude Code settings" },
+  { name:"Railway Skills (GitHub)", url:"https://github.com/railwayapp/railway-skills", cat:"Claude Connectors", rel:"Medium", os:true, summary:"Open-source agent skill definitions for Railway + Claude integration. The use-railway skill enables route-first intent routing. Works with Claude Code, Cursor, Grok Build.", howto:"railway setup agent -y" },
+  { name:"OpenRouter × Claude Code", url:"https://openrouter.ai/apps/claude-code", cat:"Claude Connectors", rel:"Medium", os:false, summary:"OpenRouter's integration for Claude Code — provides alternative model routing so Claude Code can use non-Anthropic models (DeepSeek, Llama) as backend for cost optimization.", howto:"Configure in Claude Code settings as alternative provider" },
+  { name:"OpenRouter × Hermes Agent", url:"https://openrouter.ai/apps/hermes-agent", cat:"Claude Connectors", rel:"Low", os:false, summary:"Integration page for running Nous Research's Hermes agent framework via OpenRouter's unified API.", howto:"Configure OpenRouter API key in Hermes setup" },
+
+  // ── CATEGORY 3: Claude Code Tools ────────────────────────────────────────
+  { name:"Claude Code Best Practices", url:"https://code.claude.com/docs/en/best-practices", cat:"Claude Code Tools", rel:"Very High", os:false, summary:"Comprehensive official guide covering context window management, verification strategies, plan mode, permission modes, hooks, skills, and MCP servers.", howto:"Read and apply to Sandpitt development workflow" },
+  { name:"Claude × GitHub Integration", url:"https://support.claude.com/en/articles/10167454-use-the-github-integration", cat:"Claude Code Tools", rel:"Very High", os:false, summary:"Step-by-step guide for connecting Claude to GitHub repositories — enables PR review, code context, and repository-aware conversations.", howto:"Follow guide in Claude.ai settings" },
+  { name:"43 Claude Code Tips (ykdojo)", url:"https://github.com/ykdojo/claude-code-tips", cat:"Claude Code Tools", rel:"High", os:true, summary:"Community-maintained repository with 43 practical tips for Claude Code mastery — workflows, git integration, terminal tabs, debugging, and verification methods.", howto:"Read and bookmark key tips" },
+  { name:"Claude Task Master", url:"https://github.com/eyaltoledano/claude-task-master", cat:"Claude Code Tools", rel:"Very High", os:true, summary:"AI-powered task management that integrates with Claude via MCP — converts PRDs into structured, dependency-aware task lists. Works with Claude Code, Cursor, Windsurf. MIT + Commons Clause.", howto:"Install MCP server; point at PRD file → generates task breakdown" },
+  { name:"CoTask (wbopan)", url:"https://github.com/wbopan/cotask", cat:"Claude Code Tools", rel:"High", os:true, summary:"Claude Code plugin for parallel task coordination with web dashboard — markdown-based task system with drag-and-drop UI, real-time monitoring, and human-in-the-loop agent coordination.", howto:"Install plugin; open web dashboard to manage tasks" },
+  { name:"Claude Task Manager (npm)", url:"https://www.npmjs.com/package/@gonzui/claude-task-manager", cat:"Claude Code Tools", rel:"Medium", os:true, summary:"npm package for task management integrated with Claude Code sessions — create and track tasks programmatically within development workflows.", howto:"npm install @gonzui/claude-task-manager" },
+  { name:"Build Task Manager with Live Artifacts", url:"https://automato.substack.com/p/build-task-manager-claude-live-artifacts", cat:"Claude Code Tools", rel:"Medium", os:false, summary:"Substack guide showing how to build a task manager using Claude with live Artifacts — demonstrates building web apps directly in Claude's interface.", howto:"Read and follow tutorial" },
+  { name:"Claudefa.st Project Templates", url:"https://claudefa.st/blog/guide/development/project-templates", cat:"Claude Code Tools", rel:"High", os:false, summary:"Guide for creating reusable Claude Code project templates and scaffolding — speeds up new project and module setup.", howto:"Read guide; create template files for Sandpitt" },
+  { name:"Notion Claude Dashboard Template", url:"https://www.notion.com/templates/claude-dashboard-vibe-coding", cat:"Claude Code Tools", rel:"Low", os:false, summary:"Notion template for tracking Claude Code development sessions — status boards, context documents, and vibe coding workflow management.", howto:"Import to Notion workspace" },
+  { name:"SingleFile MCP Server", url:"https://github.com/kwinsch/singlefile-mcp", cat:"Claude Code Tools", rel:"Low", os:true, summary:"MCP server that extracts complete rendered content from JS-heavy websites using SingleFile + Trafilatura — handles SPAs and paginated content.", howto:"Add to MCP config in Claude Code settings" },
+
+  // ── CATEGORY 4: AI App Builders ──────────────────────────────────────────
+  { name:"Bolt.new", url:"https://bolt.new", cat:"AI App Builders", rel:"Medium", os:false, summary:"AI-powered full-stack web app builder by StackBlitz. Generate, run, and deploy web apps from natural language prompts in the browser. Supports Figma import, Netlify, Supabase. Free + Pro $25/mo.", howto:"Visit bolt.new; describe the app you want to build" },
+  { name:"Bolt — Design System Agents", url:"https://bolt.new/blog/introducing-design-system-agents", cat:"AI App Builders", rel:"High", os:false, summary:"Blog post about Bolt's new design system agent feature — AI agents that understand and apply design systems consistently across generated components.", howto:"Read blog; use in Bolt.new when building component library" },
+  { name:"Bolt.diy (Open Source)", url:"https://github.com/stackblitz-labs/bolt.diy", cat:"AI App Builders", rel:"Medium", os:true, summary:"Open-source, self-hostable version of Bolt.new. Full control over deployment, models, and environment. Free to self-host with Node.js.", howto:"Clone repo; npm install; configure models; npm run dev" },
+  { name:"Bolt.diy Showcases", url:"https://thinktank.ottomator.ai/c/bolt-diy/bolt-diy-project-showcases/23", cat:"AI App Builders", rel:"Low", os:false, summary:"Community showcase thread on the Ottomator forum featuring projects built with Bolt.diy — inspiration and real-world examples of what's possible.", howto:"Browse for project ideas" },
+  { name:"LlamaCoder (Together AI)", url:"https://llamacoder.together.ai/", cat:"AI App Builders", rel:"Medium", os:true, summary:"Free, open-source AI web app code generator powered by Llama 3.1 405B. Generates full web applications from prompts — Claude Artifacts-style interface. 200K+ apps generated.", howto:"Visit site; describe app → get React/Next.js code" },
+  { name:"Open Artifacts", url:"https://openartifacts.vercel.app/", cat:"AI App Builders", rel:"Medium", os:true, summary:"Open-source version of Anthropic's Claude Artifacts — live coding canvas where AI-generated code can be executed and previewed inline. Supports Python and Next.js.", howto:"Visit site or self-host from GitHub" },
+  { name:"Open Artifacts (GitHub)", url:"https://github.com/13point5/open-artifacts", cat:"AI App Builders", rel:"Medium", os:true, summary:"GitHub repository for Open Artifacts — self-hostable Claude Artifacts execution environment. MIT licensed. E2B Code Interpreter integration.", howto:"Clone repo; follow setup instructions" },
+  { name:"Reflex Framework", url:"https://reflex.dev/docs/", cat:"AI App Builders", rel:"High", os:true, summary:"Full-stack web framework where you write only Python — no JavaScript, HTML, or CSS required. Compiles to React automatically. Reactive state management built in.", howto:"pip install reflex; reflex init; write app.py" },
+  { name:"Dyad (Product Hunt)", url:"https://www.producthunt.com/products/dyad-free-local-vibe-coding-tool", cat:"AI App Builders", rel:"Medium", os:false, summary:"Free, local vibe coding tool — AI-powered app builder that runs entirely locally without cloud dependencies. Privacy-focused alternative to Bolt.new.", howto:"Download from Product Hunt page" },
+
+  // ── CATEGORY 5: LLM Platforms ────────────────────────────────────────────
+  { name:"OpenRouter (All Models)", url:"https://openrouter.ai/models?order=pricing-low-to-high", cat:"LLM Platforms & APIs", rel:"High", os:false, summary:"Unified API gateway for 300+ LLMs — single API key for Claude, GPT-4, Llama, DeepSeek, Gemini, and more. No credit card required for free tier. 20 req/min free.", howto:"Sign up; get API key; use as OpenAI-compatible endpoint" },
+  { name:"OpenRouter Free Models", url:"https://openrouter.ai/openrouter/free", cat:"LLM Platforms & APIs", rel:"High", os:false, summary:"Lists all currently free models on OpenRouter — 25+ models with rate limits (20 req/min, 200 req/day). DeepSeek, Llama, Qwen, Mistral all available free.", howto:"Use any free model ID with the OpenRouter API" },
+  { name:"DeepSeek Chat v3 (Free)", url:"https://openrouter.ai/deepseek/deepseek-chat-v3-0324:free", cat:"LLM Platforms & APIs", rel:"High", os:false, summary:"DeepSeek's Chat v3 model available free via OpenRouter — strong coding and reasoning model competitive with GPT-4. Great for code generation tasks.", howto:"Use model ID deepseek/deepseek-chat-v3-0324:free with OpenRouter API" },
+  { name:"NVIDIA Nemotron 550B (Free)", url:"https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b:free#api", cat:"LLM Platforms & APIs", rel:"Medium", os:false, summary:"NVIDIA's 550B parameter model available free via OpenRouter — massive open-source model for complex analysis and reasoning tasks.", howto:"Use model ID nvidia/nemotron-3-ultra-550b-a55b:free with OpenRouter API" },
+  { name:"Together AI", url:"https://www.together.ai/", cat:"LLM Platforms & APIs", rel:"Medium", os:false, summary:"LLM API provider with 200+ open-source models — serverless inference and dedicated GPU endpoints. $25 free credits. $0.05-$9/M tokens serverless.", howto:"Sign up; get $25 credits; use OpenAI-compatible API" },
+  { name:"LocalAI", url:"https://localai.io/docs/overview/index.html", cat:"LLM Platforms & APIs", rel:"High", os:true, summary:"Free, open-source, self-hosted OpenAI-compatible LLM server. Runs on CPU or GPU. Multi-modal support (vision, voice, image), MCP agent support, no GPU required.", howto:"docker run -p 8080:8080 localai/localai:latest" },
+  { name:"Open WebUI", url:"https://openwebui.com/", cat:"LLM Platforms & APIs", rel:"High", os:true, summary:"Feature-rich self-hosted web interface for local/remote LLMs. ChatGPT-style UI compatible with Ollama and OpenAI-compatible APIs. Analytics, skill system, Python code execution.", howto:"docker run -p 3000:8080 ghcr.io/open-webui/open-webui:main" },
+  { name:"Open WebUI Community Hub", url:"https://openwebui.com/home?sort=hot", cat:"LLM Platforms & APIs", rel:"Medium", os:true, summary:"Community-contributed models, tools, prompts, and functions for Open WebUI. Discover extensions built by the community.", howto:"Browse and install community tools via the UI" },
+  { name:"Open WebUI Tools", url:"https://openwebui.com/search?sort=top&t=all&page=1&type=tool", cat:"LLM Platforms & APIs", rel:"Medium", os:true, summary:"Browse community-built tools for Open WebUI — extend the platform's capabilities with custom functions and API integrations.", howto:"Browse; install tools directly from Open WebUI settings" },
+  { name:"Open WebUI Prompts", url:"https://openwebui.com/search?sort=top&t=all&page=1&type=prompt", cat:"LLM Platforms & APIs", rel:"Medium", os:true, summary:"Browse community-contributed prompt templates — reusable prompts for common tasks including code review, documentation, and analysis.", howto:"Browse; import prompt templates into Open WebUI" },
+  { name:"Open WebUI Getting Started", url:"https://docs.openwebui.com/getting-started/essentials", cat:"LLM Platforms & APIs", rel:"High", os:true, summary:"Official getting-started guide for Open WebUI — installation, configuration, and first run. Covers Ollama integration and OpenAI API setup.", howto:"Follow guide to deploy Open WebUI" },
+  { name:"Open WebUI Alternatives", url:"https://docs.openwebui.com/alternatives/", cat:"LLM Platforms & APIs", rel:"Low", os:false, summary:"Documentation page listing alternatives to Open WebUI for self-hosted LLM interfaces — comparison of options.", howto:"Reference when evaluating self-hosted AI UIs" },
+  { name:"Hugging Face Hub", url:"https://huggingface.co/", cat:"LLM Platforms & APIs", rel:"High", os:false, summary:"World's largest AI model hub — 2M+ models, datasets, and deployment infrastructure. Source for open-source models for Sandpitt AI features.", howto:"Browse models; download or use inference API" },
+  { name:"Hugging Face Pricing", url:"https://huggingface.co/pricing", cat:"LLM Platforms & APIs", rel:"Medium", os:false, summary:"Detailed pricing for Hugging Face services — Free tier, Pro ($9/mo), Enterprise ($50+/user). CPU inference $0.06/hr, T4 GPU $0.60/hr.", howto:"Reference for cost planning" },
+  { name:"HF Inference Models", url:"https://huggingface.co/inference/models", cat:"LLM Platforms & APIs", rel:"High", os:false, summary:"Hosted inference API for models on Hugging Face Hub — run models without managing infrastructure. Free tier with rate limits.", howto:"Use HF Inference API with model ID; add API token to requests" },
+  { name:"Nous Research", url:"https://nousresearch.com/", cat:"LLM Platforms & APIs", rel:"Medium", os:false, summary:"AI research company building specialized models — creators of Hermes series (32K context, function calling, JSON mode). Models available free on HuggingFace.", howto:"Download models from HuggingFace; run via Ollama or LocalAI" },
+  { name:"Modelence Blog", url:"https://modelence.com/blog", cat:"LLM Platforms & APIs", rel:"Medium", os:false, summary:"AI platform focused on real-time capabilities and WebSocket-based AI interactions. Blog covers real-time AI integration patterns.", howto:"Read blog; evaluate for real-time Sandpitt features" },
+  { name:"Modelence WebSockets", url:"https://docs.modelence.com/websockets", cat:"LLM Platforms & APIs", rel:"Medium", os:false, summary:"Documentation for Modelence's WebSocket API — enables real-time bidirectional AI interactions for live data integrations.", howto:"Integrate WebSocket endpoint for real-time inspection status updates" },
+  { name:"HPC-AI Tech", url:"https://company.hpc-ai.com/", cat:"LLM Platforms & APIs", rel:"Low", os:false, summary:"Deep learning acceleration platform — AutoML, GPU resource management, distributed training. $50M Series A. Enterprise ML infrastructure.", howto:"Contact for enterprise AI training needs" },
+
+  // ── CATEGORY 6: Self-Hosting & Deployment ────────────────────────────────
+  { name:"CapRover", url:"https://caprover.com/", cat:"Self-Hosting & Deployment", rel:"Very High", os:true, summary:"Most mature self-hosted PaaS — Docker-based, automatic HTTPS, web UI, one-click app deployments, load balancing. Install in 5 min on any VPS. Best fit for Sandpitt production.", howto:"docker run -p 80:80 -p 443:443 caprover/caprover" },
+  { name:"Dokploy", url:"https://dokploy.com/", cat:"Self-Hosting & Deployment", rel:"Very High", os:true, summary:"Modern CapRover alternative — Git integration, Docker support, zero-downtime deployments, database hosting, clean UI. Actively developed and gaining popularity.", howto:"curl -sSL https://dokploy.com/install.sh | sh" },
+  { name:"Kubero", url:"https://github.com/kubero-dev/kubero", cat:"Self-Hosting & Deployment", rel:"High", os:true, summary:"Kubernetes-native PaaS — git integration, database hosting, full Kubernetes access, web UI. More powerful than CapRover but steeper learning curve.", howto:"Deploy via Helm chart on existing Kubernetes cluster" },
+  { name:"Komodo", url:"https://github.com/moghtech/komodo", cat:"Self-Hosting & Deployment", rel:"Medium", os:true, summary:"Multi-container orchestration tool with web-based UI and monitoring. Lightweight container management layer for small to medium deployments.", howto:"docker compose -f komodo.compose.yaml up -d" },
+  { name:"ZaneOps", url:"https://zaneops.dev/", cat:"Self-Hosting & Deployment", rel:"Medium", os:true, summary:"Developer-focused DevOps operations platform — CI/CD automation and deployment pipelines. Simplifies deployment workflows.", howto:"Follow setup guide at zaneops.dev" },
+  { name:"Vito Deploy", url:"https://vitodeploy.com/blog", cat:"Self-Hosting & Deployment", rel:"Medium", os:false, summary:"Server provisioning and deployment automation tool — manages server setup, deployments, and infrastructure as code. Blog has deployment guides.", howto:"Read blog; evaluate for Sandpitt server setup" },
+  { name:"SemaphoreUI", url:"https://semaphoreui.com/", cat:"Self-Hosting & Deployment", rel:"Medium", os:true, summary:"Web-based UI for Ansible automation — visual interface for running Ansible playbooks and managing infrastructure configuration.", howto:"docker run --name semaphore -p 3000:3000 semaphoreui/semaphore" },
+  { name:"Northflank", url:"https://northflank.com/", cat:"Self-Hosting & Deployment", rel:"Medium", os:false, summary:"Managed container deployment platform — multi-region, API-first, monitoring included. More expensive than self-hosted options but requires no infrastructure management.", howto:"Sign up at northflank.com; connect GitHub; deploy containers" },
+  { name:"Runtipi", url:"https://runtipi.io/", cat:"Self-Hosting & Deployment", rel:"Low", os:true, summary:"One-click app installer for personal servers — home automation and media server focus, Docker-based. Not suited for production multi-service apps.", howto:"Follow quickstart at runtipi.io" },
+  { name:"Umbrel OS", url:"https://umbrel.com/umbrelos", cat:"Self-Hosting & Deployment", rel:"Low", os:true, summary:"Personal server OS with app marketplace — Bitcoin/Lightning Network focus but supports general apps. Better for personal home server use.", howto:"Flash to Raspberry Pi or x86 machine" },
+  { name:"YunoHost", url:"https://yunohost.org/", cat:"Self-Hosting & Deployment", rel:"Low", os:true, summary:"Server OS for home/small business — multi-domain, user management, app catalog, Let's Encrypt, backups. Limited scaling for complex multi-service stacks.", howto:"Install on VPS via setup script" },
+  { name:"Syncloud", url:"https://syncloud.org/", cat:"Self-Hosting & Deployment", rel:"Low", os:true, summary:"Personal cloud OS — file sync, web hosting, app management, no account required. Personal use focus, not production-grade.", howto:"Flash image to device; access via browser" },
+  { name:"Sandstorm", url:"https://sandstorm.org/", cat:"Self-Hosting & Deployment", rel:"Low", os:true, summary:"Sandboxed self-hosting platform with grain-based app isolation. Good for isolated web apps but not flexible enough for custom full-stack backends.", howto:"Self-host via sandstorm.io image" },
+  { name:"Cosmos Cloud", url:"https://cosmos-cloud.io/", cat:"Self-Hosting & Deployment", rel:"Medium", os:true, summary:"Infrastructure management and orchestration platform with multi-cloud support and monitoring. Good middle layer for managing multiple services.", howto:"Follow setup guide at cosmos-cloud.io" },
+  { name:"Uncloud", url:"https://uncloud.run/", cat:"Self-Hosting & Deployment", rel:"Medium", os:false, summary:"Simple cloud hosting provider — instances, storage, networking. Straightforward VPS alternative.", howto:"Sign up; create instance; SSH and deploy" },
+  { name:"Caddy Server", url:"https://caddyserver.com/", cat:"Self-Hosting & Deployment", rel:"Very High", os:true, summary:"Modern, automatic HTTPS web server and reverse proxy. Simpler than Nginx with automatic Let's Encrypt. Perfect companion to CapRover/Dokploy for Sandpitt.", howto:"apt install caddy; write Caddyfile; systemctl start caddy" },
+  { name:"Windmill (Workflow Engine)", url:"https://www.windmill.dev/use-cases/internal-apps", cat:"Self-Hosting & Deployment", rel:"High", os:true, summary:"Open-source workflow engine and internal tool builder — scripts, flows, REST APIs, self-hosted, scheduling, user management, permission system.", howto:"docker compose up -d from windmill-docker repo" },
+  { name:"Awesome Selfhosted", url:"https://gitlab.com/awesome-selfhosted/awesome-selfhosted", cat:"Self-Hosting & Deployment", rel:"Medium", os:false, summary:"Community-maintained list of 900+ self-hosted applications organized by category. The definitive reference directory for self-hosted software.", howto:"Browse list; search by category" },
+
+  // ── CATEGORY 7: Authentication ────────────────────────────────────────────
+  { name:"Logto Account Center", url:"https://logto.io/products/account-center", cat:"Authentication & Identity", rel:"High", os:true, summary:"Embeddable account management UI — users can manage their own profile, password, MFA, and connected accounts. White-label ready. Keycloak alternative.", howto:"Add Logto Account Center component to Sandpitt admin frontend" },
+  { name:"Logto OSS Docs", url:"https://docs.logto.io/logto-oss", cat:"Authentication & Identity", rel:"High", os:true, summary:"Modern, developer-friendly identity platform — OAuth 2.0, OIDC, passwordless auth, social sign-in, SDKs for all major languages. Self-hosted option.", howto:"docker compose up -d from logto docker-compose.yml" },
+  { name:"Logto Branding Customization", url:"https://docs.logto.io/customization/match-your-brand#hide-logto-branding", cat:"Authentication & Identity", rel:"High", os:true, summary:"Guide for white-labeling Logto — custom CSS, hide Logto branding, full brand control for enterprise deployments like Sandpitt.", howto:"Add custom CSS overrides in Logto admin console" },
+  { name:"Zitadel MFA Features", url:"https://zitadel.com/features#multifactor", cat:"Authentication & Identity", rel:"High", os:true, summary:"Enterprise-grade MFA — TOTP, SMS, U2F/WebAuthn, security keys, passwordless. More comprehensive than basic Keycloak MFA setup. Better security for field inspectors.", howto:"Deploy Zitadel; configure MFA policies in admin console" },
+  { name:"Zitadel B2B Scenarios", url:"https://zitadel.com/docs/guides/solution-scenarios/b2b", cat:"Authentication & Identity", rel:"High", os:true, summary:"Multi-organization authentication — manage multiple client organizations, delegate admin, role-based access per org. Useful if Sandpitt serves multiple companies.", howto:"Configure organizations and roles in Zitadel admin" },
+  { name:"Zitadel API Docs", url:"https://zitadel.com/docs/apis/introduction", cat:"Authentication & Identity", rel:"High", os:true, summary:"Comprehensive APIs for identity management, user admin, audit logging, and credential management. Rich programmatic control for FastAPI integration.", howto:"Use Zitadel gRPC/REST API from FastAPI backend" },
+  { name:"Open Source Auth Tools Comparison", url:"https://www.opensourcealternatives.to/blog/best-open-source-authentication-tools", cat:"Authentication & Identity", rel:"Medium", os:false, summary:"Overview of open-source authentication solutions — Keycloak, Logto, Zitadel, Authentik, Ory comparison with feature matrix.", howto:"Read to choose best Keycloak alternative" },
+
+  // ── CATEGORY 8: Database & Ledger ────────────────────────────────────────
+  { name:"ImmuDB — Replication", url:"https://docs.immudb.io/master/production/replication", cat:"Database & Immutable Ledger", rel:"High", os:true, summary:"Immutable database with replication — tamper-proof audit trails with Byzantine fault tolerance. Cannot alter or delete records. Perfect for inspection audit logs.", howto:"Deploy immudb container; connect via immudb Go/Python SDK" },
+  { name:"ImmuDB — Index Maintenance", url:"https://docs.immudb.io/master/production/index-maintenance", cat:"Database & Immutable Ledger", rel:"Medium", os:true, summary:"Production index optimization guide for ImmuDB deployments — query performance and maintenance procedures.", howto:"Follow guide when running ImmuDB in production" },
+  { name:"ImmuDB Release Notes", url:"https://docs.immudb.io/master/releasenotes", cat:"Database & Immutable Ledger", rel:"Low", os:true, summary:"ImmuDB version history and changelog — track what features are available in each release.", howto:"Reference before upgrading ImmuDB version" },
+  { name:"PocketBase", url:"https://www.opensourcealternatives.to/item/pocketbase", cat:"Database & Immutable Ledger", rel:"Medium", os:true, summary:"SQLite-based real-time backend with built-in auth, REST API, file uploads, and admin UI. Single binary deployment. Lightweight alternative to FastAPI+PostgreSQL.", howto:"Download binary; ./pocketbase serve" },
+  { name:"BigchainDB", url:"https://www.opensourcealternatives.to/item/bigchaindb", cat:"Database & Immutable Ledger", rel:"Low", os:true, summary:"Blockchain database combining MongoDB features with immutability — decentralized asset management, immutable records. More complex than ImmuDB.", howto:"Deploy via Docker; use Python/JS SDK" },
+  { name:"Hyperledger Fabric", url:"https://hyperledger-fabric.readthedocs.io/en/release-2.5/", cat:"Database & Immutable Ledger", rel:"Low", os:true, summary:"Enterprise-grade permissioned blockchain — smart contracts, private channels, modular consensus. Linux Foundation project. Overkill unless regulatory blockchain required.", howto:"Follow fabric-samples quickstart guide" },
+  { name:"Corda (GitHub)", url:"https://github.com/corda/corda", cat:"Database & Immutable Ledger", rel:"Low", os:true, summary:"Business-focused blockchain platform — smart contracts in Kotlin/Java, private transactions, notary infrastructure. Designed for financial networks.", howto:"Clone repo; follow Corda getting started guide" },
+  { name:"CachetHQ Status Page", url:"https://cachethq.io/", cat:"Database & Immutable Ledger", rel:"Medium", os:true, summary:"Open-source status page system — displays service status and incidents for your infrastructure. Show Sandpitt service health to users.", howto:"Deploy via Docker; configure components and incidents" },
+  { name:"OpenLogs", url:"https://openlogs.org/", cat:"Database & Immutable Ledger", rel:"Medium", os:true, summary:"Open-source log aggregation and analysis platform — collects and makes searchable logs from multiple services. Centralize Sandpitt logs.", howto:"Deploy and configure log shipping from API + Keycloak" },
+  { name:"Appsmith", url:"https://docs.appsmith.com/getting-started/setup", cat:"Database & Immutable Ledger", rel:"Very High", os:true, summary:"Open-source low-code platform for building internal admin tools — drag-and-drop UI builder, connects to PostgreSQL, REST APIs, and more.", howto:"docker compose up -d from appsmith docker-compose.yml" },
+  { name:"Grist (Excel Alternative)", url:"https://www.xda-developers.com/grist-free-open-source-excel-alternative/", cat:"Database & Immutable Ledger", rel:"High", os:true, summary:"Open-source spreadsheet-database hybrid — self-hostable, real-time collaboration, API access. Alternative to Airtable/Excel for inspection data entry.", howto:"Self-host via Docker; import inspection data; share with team" },
+
+  // ── CATEGORY 9: Project Management ───────────────────────────────────────
+  { name:"Super Productivity", url:"https://super-productivity.com/", cat:"Project Management & Productivity", rel:"High", os:true, summary:"Open-source task and time management app — GTD-inspired, integrates with Jira/GitHub, offline-first, focus mode, time tracking. Highly rated for developers.", howto:"Download app or use web version; connect GitHub/Jira" },
+  { name:"Super Productivity — Getting Started", url:"https://super-productivity.com/blog/getting-started-with-super-productivity/", cat:"Project Management & Productivity", rel:"Medium", os:true, summary:"Onboarding guide covering initial setup, task creation, project organization, and integration configuration for Super Productivity.", howto:"Read to set up SP for Sandpitt development" },
+  { name:"Super Productivity — GTD Guide", url:"https://super-productivity.com/guides/getting-things-done/", cat:"Project Management & Productivity", rel:"Medium", os:true, summary:"How to implement the Getting Things Done methodology in Super Productivity — capture, process, organize, reflect, engage workflow.", howto:"Read and implement GTD workflow for Sandpitt tasks" },
+  { name:"Super Productivity — ADHD Focus", url:"https://super-productivity.com/use-cases/adhd-focus/", cat:"Project Management & Productivity", rel:"Medium", os:true, summary:"Guide for using Super Productivity's focus features for ADHD — time blocking, minimalist mode, distraction reduction, Pomodoro timer.", howto:"Enable focus mode; use Pomodoro in SP" },
+  { name:"Super Productivity — Side Projects Guide", url:"https://super-productivity.com/blog/finish-side-projects-developer-guide/", cat:"Project Management & Productivity", rel:"Medium", os:true, summary:"Guide specifically for developers on how to complete side projects using Super Productivity — time management and scope control.", howto:"Read; apply strategies to Sandpitt development" },
+  { name:"Super Productivity — Prioritizing", url:"https://super-productivity.com/blog/prioritising-scheme/", cat:"Project Management & Productivity", rel:"Low", os:true, summary:"Article on SP's priority system — how to prioritize tasks effectively using the app's built-in schemes.", howto:"Reference for setting Sandpitt feature priorities" },
+  { name:"Super Productivity — Local vs Cloud", url:"https://super-productivity.com/blog/local-vs-cloud-productivity/", cat:"Project Management & Productivity", rel:"Low", os:true, summary:"Comparison of local-first vs cloud-based productivity tools — privacy, control, offline access considerations.", howto:"Reference for tool selection decisions" },
+  { name:"OpenProject Integrations", url:"https://www.openproject.org/integrations/", cat:"Project Management & Productivity", rel:"High", os:true, summary:"Open-source project management platform integrations — GitHub, GitLab, Slack, Nextcloud. More powerful than basic task managers for Sandpitt roadmap.", howto:"Deploy OpenProject; connect GitHub for PR tracking" },
+  { name:"OpenProject × Excel Sync", url:"https://www.openproject.org/docs/system-admin-guide/integrations/excel-synchronization/", cat:"Project Management & Productivity", rel:"Medium", os:true, summary:"Guide for syncing OpenProject tasks with Excel spreadsheets — useful for stakeholders who prefer Excel for reporting.", howto:"Follow guide to configure Excel sync plugin" },
+  { name:"AppFlowy Templates", url:"https://appflowy.com/templates", cat:"Project Management & Productivity", rel:"High", os:true, summary:"Open-source Notion alternative — project management, wikis, databases, offline-first, self-hostable. Templates for sprints, roadmaps, and knowledge bases.", howto:"Download AppFlowy; import templates for Sandpitt planning" },
+  { name:"Rundeck", url:"https://www.rundeck.com/", cat:"Project Management & Productivity", rel:"Medium", os:true, summary:"Operations automation platform — schedule and orchestrate jobs, runbooks, and infrastructure tasks. Schedule automated Sandpitt tasks like backups and maintenance.", howto:"Deploy Rundeck; create jobs for scheduled maintenance tasks" },
+  { name:"Shelf.nu", url:"https://www.shelf.nu/features", cat:"Project Management & Productivity", rel:"Very High", os:true, summary:"Open-source asset management platform with QR code scanning, location tracking, custody management, and maintenance logs. 2.6k GitHub stars. Direct Sandpitt parallel.", howto:"Study source code for architecture patterns; or deploy as standalone" },
+
+  // ── CATEGORY 10: Automation ───────────────────────────────────────────────
+  { name:"Activepieces", url:"https://cloud.activepieces.com/sign-up", cat:"Automation & Workflow", rel:"Very High", os:true, summary:"Open-source no-code/low-code workflow automation — 200+ integrations, trigger-based automation, conditional logic. Self-hosted option available.", howto:"Sign up cloud or self-host; connect Sandpitt API triggers" },
+  { name:"Automatisch", url:"https://automatisch.io/", cat:"Automation & Workflow", rel:"Very High", os:true, summary:"Self-hosted Zapier alternative — 500+ integrations, no-code automation builder, privacy-focused. Trigger inspection workflows from external events.", howto:"docker compose up -d from automatisch repo" },
+  { name:"Airbyte Connectors", url:"https://airbyte.com/connectors", cat:"Automation & Workflow", rel:"High", os:true, summary:"Open-source data integration platform — 300+ pre-built connectors, ELT pipelines, data sync. Sync Sandpitt inspection data to data warehouse or BI tools.", howto:"Deploy Airbyte; configure source (Sandpitt PG) and destination" },
+  { name:"Activepieces Review (OSA)", url:"https://www.opensourcealternatives.to/item/activepieces", cat:"Automation & Workflow", rel:"Medium", os:true, summary:"OpenSourceAlternatives.to review of Activepieces — community ratings, alternatives, and comparison with Zapier/Make.com.", howto:"Read reviews before choosing automation platform" },
+
+  // ── CATEGORY 11: Low-Code / Data ─────────────────────────────────────────
+  { name:"AITable.ai", url:"https://aitable.ai/", cat:"Low-Code & Data Platforms", rel:"High", os:false, summary:"Low-code AI database and automation platform — Airtable alternative with AI agents, no-code workflow builder, embedded views, and API access.", howto:"Sign up; build inspection record database; embed in Sandpitt" },
+  { name:"AITable Templates", url:"https://aitable.ai/template", cat:"Low-Code & Data Platforms", rel:"High", os:false, summary:"Pre-built AITable templates for project management, CRM, inventory, and inspection management. Starting point for Sandpitt data structures.", howto:"Browse templates; duplicate and customize for Sandpitt" },
+  { name:"AITable Blog — Smart Contracts", url:"https://aitable.ai/blog/smart-contract-management-system/", cat:"Low-Code & Data Platforms", rel:"Low", os:false, summary:"Blog post about building a smart contract management system with AITable — demonstrates complex workflow automation.", howto:"Read as implementation reference" },
+  { name:"AITable Help", url:"https://help.aitable.ai/", cat:"Low-Code & Data Platforms", rel:"Low", os:false, summary:"Official documentation and support center for AITable.", howto:"Reference during AITable setup" },
+  { name:"Woobox", url:"https://woobox.com/", cat:"Low-Code & Data Platforms", rel:"None", os:false, summary:"Marketing platform for contests, giveaways, surveys, and social engagement campaigns. Not relevant to Sandpitt inspection system.", howto:"N/A" },
+  { name:"Billing SDK", url:"https://billingsdk.com/", cat:"Low-Code & Data Platforms", rel:"Low", os:false, summary:"Payment and subscription billing SDK — subscription management, invoicing, payment integration. Only relevant if Sandpitt needs subscription billing.", howto:"Integrate SDK if adding subscription pricing" },
+  { name:"Handle.ai", url:"https://gethandle.ai/", cat:"Low-Code & Data Platforms", rel:"Low", os:false, summary:"AI-powered customer support platform — conversational AI for helpdesks. Only relevant if adding AI support chatbot to Sandpitt.", howto:"Integrate if adding customer support channel" },
+  { name:"Capgo", url:"https://capgo.app/", cat:"Low-Code & Data Platforms", rel:"Medium", os:false, summary:"Over-the-air (OTA) update platform for Capacitor/mobile apps — push live updates without app store review. Note: Sandpitt currently uses Expo, not Capacitor.", howto:"If migrating to Capacitor: integrate Capgo SDK" },
+
+  // ── CATEGORY 12: Asset & Inspection Management ───────────────────────────
+  { name:"GitHub: Asset Management Systems", url:"https://github.com/topics/asset-management-system", cat:"Asset & Inspection Management", rel:"Very High", os:true, summary:"GitHub topic aggregating open-source asset management projects — Shelf.nu (2.6k stars), Asseto, SAMS, Ramses. Study implementations, borrow patterns.", howto:"Browse topic; star repositories for reference" },
+  { name:"Asseto (VyrazuLabs)", url:"https://github.com/VyrazuLabs/asseto-asset-management", cat:"Asset & Inspection Management", rel:"Very High", os:true, summary:"Enterprise asset management platform — asset tracking, assignments, maintenance logs, inventory, 2FA, audit logging, Slack integration, mobile apps, CSV import. MIT licensed.", howto:"Clone repo; study architecture for Sandpitt reference" },
+  { name:"Mobiess — Asset Inspections", url:"https://www.mobiess.com/modules/audits-and-inspections/asset-based-inspections", cat:"Asset & Inspection Management", rel:"Very High", os:false, summary:"Commercial field inspection and audit management platform — mobile-first, asset-based inspections, configurable forms, offline support. Defines market expectations.", howto:"Review features as commercial competitor benchmark" },
+  { name:"Mobiess Demo", url:"https://www.mobiess.com/book-a-demo", cat:"Asset & Inspection Management", rel:"Medium", os:false, summary:"Book a demo of the Mobiess commercial inspection management platform. Useful for competitive research.", howto:"Book demo to understand enterprise inspection feature expectations" },
+  { name:"ZYGHT Functionality", url:"https://docs.dataminesoftware.com/ZYGHT/Latest/B-Introduction-Topics/ZYGHT-Functionality.htm", cat:"Asset & Inspection Management", rel:"High", os:false, summary:"Enterprise safety and inspection management system — comprehensive HSSE platform with audit trails, corrective actions, risk management, regulatory compliance.", howto:"Review docs as enterprise feature benchmark for Sandpitt" },
+  { name:"Build Inspection App with Bubble", url:"https://www.lowcode.agency/blog/build-asset-inspection-app-bubble", cat:"Asset & Inspection Management", rel:"Medium", os:false, summary:"Tutorial on building an asset inspection app using Bubble.io — no-code approach with checklists, photo capture, and reporting. Alternative implementation approach.", howto:"Read for feature list and UX ideas" },
+  { name:"OutSystems — Mobile Asset Inspections", url:"https://www.outsystems.com/case-studies/smart-ais-mobile-asset-inspections-app/", cat:"Asset & Inspection Management", rel:"High", os:false, summary:"Case study of a mobile asset inspection app — covers offline support, photo capture, inspection workflows, backend integration. Enterprise feature reference.", howto:"Review as enterprise-grade feature benchmark" },
+  { name:"VyrazuLabs Asseto (GitHub)", url:"https://github.com/VyrazuLabs/asseto-asset-management", cat:"Asset & Inspection Management", rel:"Very High", os:true, summary:"Duplicate reference — same as Asseto above. Open-source asset management with lifecycle tracking, audit logs, and mobile apps.", howto:"Study source code for Sandpitt architecture patterns" },
+
+  // ── CATEGORY 13: Dev Frameworks ──────────────────────────────────────────
+  { name:"tRPC + Prisma Next.js Starter", url:"https://github.com/trpc/trpc/tree/main/examples/next-prisma-starter", cat:"Dev Frameworks & References", rel:"Medium", os:true, summary:"Official tRPC starter with Next.js and Prisma ORM — demonstrates type-safe API calls between frontend and backend. Reference for Sandpitt admin frontend patterns.", howto:"Clone as reference; adapt type-safety patterns to Sandpitt" },
+  { name:"MDN PWA Examples", url:"https://github.com/mdn/pwa-examples", cat:"Dev Frameworks & References", rel:"Medium", os:true, summary:"Mozilla's PWA example implementations — service workers, offline functionality, installability, push notifications. If adding PWA support to Sandpitt mobile web.", howto:"Reference for implementing PWA features in Next.js admin" },
+  { name:"PWA LiveView (Offline-First)", url:"https://github.com/dwyl/PWA-Liveview", cat:"Dev Frameworks & References", rel:"High", os:true, summary:"Real-time, offline-first collaborative PWA — demonstrates offline sync, real-time collaboration, server reconciliation with PostgreSQL. Directly relevant to mobile inspection offline mode.", howto:"Study sync patterns for Sandpitt React Native offline support" },
+  { name:"Sass Scaffolding", url:"https://github.com/germanpericon/sasscaffolding", cat:"Dev Frameworks & References", rel:"Low", os:true, summary:"SCSS/Sass project scaffolding template — organized file structure for large stylesheets.", howto:"Reference for Next.js admin CSS architecture" },
+  { name:"Dyrector.io", url:"https://www.opensourcealternatives.to/item/dyrectorio", cat:"Dev Frameworks & References", rel:"Medium", os:true, summary:"Container deployment and release management platform — multi-cloud, infrastructure as code. Alternative deployment option for Sandpitt.", howto:"Evaluate as CapRover/Dokploy alternative" },
+  { name:"RustDesk", url:"https://www.opensourcealternatives.to/item/rustdesk", cat:"Dev Frameworks & References", rel:"Low", os:true, summary:"Open-source remote desktop application — self-hosted TeamViewer alternative. Not directly relevant to Sandpitt.", howto:"N/A for Sandpitt" },
+
+  // ── CATEGORY 14: Community Discussions ───────────────────────────────────
+  { name:"Reddit: Claude for Business Brainstorming", url:"https://www.reddit.com/r/ClaudeAI/comments/1gpm07k/claude_is_my_favourite_way_to_brainstorm_business/", cat:"Community Discussions", rel:"Medium", os:false, summary:"Users praise Claude for business idea generation and structured thinking. Discusses workflow for using Claude in early-stage product development. Good for Sandpitt feature brainstorming.", howto:"Read for brainstorming workflow ideas" },
+  { name:"Reddit: Biggest Platform Built with Claude", url:"https://www.reddit.com/r/ClaudeAI/comments/1tjmy6b/what_is_the_biggest_known_appplatform_thats_been/", cat:"Community Discussions", rel:"High", os:false, summary:"Community shares the largest production applications built using Claude — scale validation and precedent for building full platforms with Claude Code.", howto:"Read for production-scale Claude development precedents" },
+  { name:"Reddit: Claude Code Certification", url:"https://www.reddit.com/r/claude/comments/1tgnth4/just_finished_the_claude_code_certification_and/", cat:"Community Discussions", rel:"Medium", os:false, summary:"Discussion of the Claude Code certification program — what it covers, difficulty, and value for developers. Mentions key skills covered.", howto:"Consider taking the certification for Sandpitt development" },
+  { name:"Reddit: Complete SaaS with Claude", url:"https://www.reddit.com/r/SaaS/comments/1s25xx4/has_anyone_built_a_complete_saas_product_using/", cat:"Community Discussions", rel:"Very High", os:false, summary:"Community discussion on real-world SaaS products built with Claude Code — success stories, pitfalls, and workflows. Direct precedent for Sandpitt.", howto:"Read all comments for lessons learned" },
+  { name:"Reddit: Excel to Finance App in 9 Days", url:"https://www.reddit.com/r/vibecoding/comments/1sft1qj/from_an_excel_spreadsheet_to_a_full_finance_app_9/", cat:"Community Discussions", rel:"High", os:false, summary:"Developer documents converting a complex Excel spreadsheet into a full-stack web app using AI-driven development. Methodology applicable to Sandpitt rapid development.", howto:"Read for rapid development methodology" },
+  { name:"Reddit: Claude Fable 5 for Vibe Coding", url:"https://www.reddit.com/r/vibecoding/comments/1u249n3/claude_fable_5_not_that_good_for_vibe_coding_huh/", cat:"Community Discussions", rel:"Medium", os:false, summary:"Community assessment of Claude Fable 5 for vibe coding — strengths, weaknesses, and model comparisons for AI-driven development.", howto:"Read for model selection guidance" },
+  { name:"Reddit: Local AI Development Intro", url:"https://www.reddit.com/r/LocalLLaMA/comments/1t2icy1/if_youve_been_waiting_to_try_local_ai_development/", cat:"Community Discussions", rel:"Medium", os:false, summary:"Introduction guide to local LLM development — setup, tools, and models. Relevant if considering LocalAI for offline Sandpitt development.", howto:"Read for local AI setup guidance" },
+  { name:"Reddit: Dashboard for Multiple Claudes", url:"https://www.reddit.com/r/ClaudeAI/comments/1q6sg8g/built_a_web_dashboard_for_managing_multiple/", cat:"Community Discussions", rel:"High", os:false, summary:"Developer shares a web dashboard for orchestrating multiple parallel Claude Code sessions — multi-agent coordination patterns for complex projects.", howto:"Read for multi-agent orchestration patterns" },
+  { name:"Reddit: Open-Sourced Project Tracker", url:"https://www.reddit.com/r/ClaudeAI/comments/1svkyby/i_open_sourced_a_project_tracker_for_claude_code/", cat:"Community Discussions", rel:"Very High", os:true, summary:"Developer open-sources a project tracking tool specifically designed for Claude Code development sessions. Track Sandpitt development progress.", howto:"Find linked repo in post; evaluate for Sandpitt use" },
+  { name:"Reddit: Grill Me Claude Skill Viral", url:"https://www.reddit.com/r/vibecoding/comments/1swyadr/viral_grill_me_claude_skill_proves_specstocode_is/", cat:"Community Discussions", rel:"High", os:false, summary:"Discussion of a viral Claude skill that critically reviews specs and code — validates the spec-driven development approach that applies to Sandpitt.", howto:"Read for spec-to-code workflow validation" },
+  { name:"Reddit: Productivity App with Claude Code", url:"https://www.reddit.com/r/ClaudeAI/comments/1mnw4p5/built_a_productivity_app_entirely_with_claude_code/", cat:"Community Discussions", rel:"Very High", os:false, summary:"Developer shares experience building a complete productivity app using only Claude Code — architecture, challenges, and results. Full-app development case study.", howto:"Read for lessons on full-app Claude Code development" },
+  { name:"Reddit: Analytics Dashboard for Claude", url:"https://www.reddit.com/r/ClaudeAI/comments/1lxacw4/built_a_realtime_analytics_dashboard_for_claude/", cat:"Community Discussions", rel:"High", os:false, summary:"Developer shares a real-time analytics dashboard for monitoring Claude Code usage. Analytics patterns applicable to Sandpitt admin dashboard.", howto:"Read for analytics dashboard patterns" },
+  { name:"Reddit: Frame — Claude Code Project Manager", url:"https://www.reddit.com/r/ClaudeCode/comments/1qotbnv/frame_managing_projects_tasks_and_context_for/", cat:"Community Discussions", rel:"Very High", os:false, summary:"Community shares 'Frame', a project and task management tool specifically designed for Claude Code development workflows. Context and task management.", howto:"Find Frame tool in comments; evaluate for Sandpitt" },
+  { name:"Reddit: Best Claude Code Project Setup", url:"https://www.reddit.com/r/ClaudeAI/comments/1lcbt4q/the_best_way_to_setup_a_claude_code_project/", cat:"Community Discussions", rel:"Very High", os:false, summary:"Community best practices for Claude Code project configuration — CLAUDE.md, memory, MCP servers, permissions. Directly applicable to Sandpitt setup.", howto:"Read all comments; apply best practices to Sandpitt CLAUDE.md" },
+  { name:"Reddit: Open-Source Workflow Engine (Dev)", url:"https://www.reddit.com/r/GithubCopilot/comments/1rkkp1r/an_opensource_workflow_engine_to_automate_the/", cat:"Community Discussions", rel:"High", os:true, summary:"Developer shares an open-source workflow engine for automating software development processes — CI/CD-style automation for the dev workflow itself.", howto:"Find linked tool; evaluate for Sandpitt automation" },
+  { name:"Reddit: Self-Hosted Tagging Storage", url:"https://www.reddit.com/r/selfhosted/comments/1p30puo/a_self_hosted_organization_tagging_and_storage/", cat:"Community Discussions", rel:"Medium", os:true, summary:"Community shares a self-hosted system for organizing, tagging, and storing documents/files. Relevant for Sandpitt document management.", howto:"Find linked project; evaluate for inspection document storage" },
+  { name:"Reddit: SoloLLM Developer AMA", url:"https://www.reddit.com/r/AMA/comments/1sn43jk/im_the_solo_developer_behind_solollm_ama_about/", cat:"Community Discussions", rel:"Medium", os:false, summary:"AMA with solo developer of SoloLLM — insights on building, maintaining, and growing a solo LLM product. Relevant to solo or small-team AI product development.", howto:"Read for solo AI product development insights" },
+  { name:"Reddit: No-Code Asset Inspection Platform", url:"https://www.reddit.com/r/nocode/comments/ucazvn/nocode_asset_inspection_platform/", cat:"Community Discussions", rel:"Very High", os:false, summary:"Reddit discussion about building an asset inspection platform with no-code tools — feature requirements, Glide/Bubble/Airtable options discussed. Direct Sandpitt domain.", howto:"Read for feature requirements and user expectations" },
+
+  // ── CATEGORY 15: YouTube ──────────────────────────────────────────────────
+  { name:"YouTube: Claude Code Workflow (likely)", url:"https://m.youtube.com/watch?v=44uWIkGZ4W8", cat:"YouTube Videos", rel:"Medium", os:false, summary:"YouTube video found near Claude Code and vibe coding content. Likely a Claude Code tutorial or AI development walkthrough.", howto:"Watch video" },
+  { name:"YouTube: Claude Tutorial (likely)", url:"https://m.youtube.com/watch?v=cQGUJSbpzDg", cat:"YouTube Videos", rel:"Medium", os:false, summary:"YouTube video found near Claude Code developer tools content. Likely a tutorial or demo.", howto:"Watch video" },
+  { name:"YouTube: Vibe Coding (likely)", url:"https://m.youtube.com/watch?v=-P2Zy6z9IjQ", cat:"YouTube Videos", rel:"Low", os:false, summary:"YouTube video found near vibe coding subreddit. Likely a vibe coding demonstration.", howto:"Watch video" },
+  { name:"YouTube: AITable Demo (likely)", url:"https://m.youtube.com/watch?v=b2gaH-_6CXE", cat:"YouTube Videos", rel:"Medium", os:false, summary:"YouTube video found near AITable and productivity tool content. Likely an AITable feature demo.", howto:"Watch video" },
+  { name:"YouTube: No-Code Tools (likely)", url:"https://m.youtube.com/watch?v=CZXZyMyo_lo", cat:"YouTube Videos", rel:"Low", os:false, summary:"YouTube video near AITable and no-code tools. May be a no-code platform tutorial.", howto:"Watch video" },
+  { name:"YouTube: Modelence/Real-time AI (likely)", url:"https://m.youtube.com/watch?v=BRkpbffJBd4", cat:"YouTube Videos", rel:"Medium", os:false, summary:"YouTube video near Modelence real-time AI content. Likely a real-time AI integration demo.", howto:"Watch video" },
+  { name:"YouTube: Logto/Auth Demo (likely)", url:"https://m.youtube.com/watch?v=MQk8xyZEKYg", cat:"YouTube Videos", rel:"Medium", os:false, summary:"YouTube video near Logto/auth content. Likely a Logto or authentication platform tutorial.", howto:"Watch video" },
+  { name:"YouTube: Claude Connectors Demo (likely)", url:"https://m.youtube.com/watch?v=CCJJl66t4Ak", cat:"YouTube Videos", rel:"Medium", os:false, summary:"YouTube video near Claude connectors/auth content. Likely a Claude connectors or Keycloak demo.", howto:"Watch video" },
+  { name:"YouTube: Claude Tutorials (likely)", url:"https://m.youtube.com/watch?v=KUqRFSMIXck", cat:"YouTube Videos", rel:"Medium", os:false, summary:"YouTube video near Claude resources/tutorials page. Likely an official Claude tutorial.", howto:"Watch video" },
+  { name:"YouTube: Claude Code Tips (likely)", url:"https://m.youtube.com/watch?v=mXkAm7zVLbM", cat:"YouTube Videos", rel:"High", os:false, summary:"YouTube video near Claude Code tips — likely a Claude Code workflow tutorial with practical productivity tips.", howto:"Watch video for Claude Code workflow tips" },
+  { name:"YouTube: Claude Agent Tutorial (likely)", url:"https://m.youtube.com/watch?v=JHi7MpbXvHw", cat:"YouTube Videos", rel:"High", os:false, summary:"YouTube video between ClaudePluginHub agent links — likely a Claude agent configuration or plugin tutorial.", howto:"Watch video for Claude agent setup guidance" },
+  { name:"Logto YouTube Channel", url:"https://m.youtube.com/@logto-io", cat:"YouTube Videos", rel:"Medium", os:false, summary:"Official Logto YouTube channel — tutorials for Logto identity platform setup, features, and integrations.", howto:"Subscribe; watch setup tutorials for Sandpitt auth" },
+  { name:"YouTube: Inspection Software Demo (likely)", url:"https://m.youtube.com/channel/UCmT3Hj0S7QUplIPHMYWuHPw", cat:"YouTube Videos", rel:"High", os:false, summary:"YouTube channel found near Mobiess/ZYGHT inspection tool content. Likely an inspection management software demo channel.", howto:"Browse channel for commercial inspection software feature demos" },
+
+  // ── CATEGORY 16: iOS / Apple ─────────────────────────────────────────────
+  { name:"Apple Passwords App — Verification Codes", url:"https://support.apple.com/en-us/120758", cat:"iOS & Apple Tools", rel:"Low", os:false, summary:"Apple support article for the built-in Passwords app on iOS — setting up TOTP verification codes. Personal 2FA setup.", howto:"Follow guide to set up 2FA on iOS" },
+  { name:"MacRumors — iOS Verification Codes", url:"https://www.macrumors.com/how-to/generate-verification-codes-passwords-app-ios/", cat:"iOS & Apple Tools", rel:"Low", os:false, summary:"How-to guide on generating 2FA verification codes using the native iOS Passwords app. Reference for Sandpitt MFA user documentation.", howto:"Reference when writing Sandpitt MFA user guide" },
+  { name:"Infobip — Verify Without Phone", url:"https://www.infobip.com/blog/how-to-get-verified-without-your-phone", cat:"iOS & Apple Tools", rel:"Low", os:false, summary:"Blog post about verification methods that don't require a phone — backup codes, email verification, authenticator apps. Reference for Sandpitt 2FA design.", howto:"Reference when designing Sandpitt MFA fallback options" },
+  { name:"Interac Verified for Business", url:"https://www.interac.ca/en/verification/business/learn-about-interac-verified-for-business/", cat:"iOS & Apple Tools", rel:"None", os:false, summary:"Interac's business identity verification service for Canadian users. Not relevant to Australian-based Sandpitt project.", howto:"N/A" },
+  { name:"Apple Shortcuts — Email Cleanup", url:"https://www.boxblinkracer.com/blog/apple-shortcuts-email-cleanup", cat:"iOS & Apple Tools", rel:"Low", os:false, summary:"Blog post about automating email management with Apple Shortcuts — filtering, archiving, and organizing email. Personal productivity tool.", howto:"Follow guide to automate your own email" },
+  { name:"Airtable iOS Shortcut for Attachments", url:"https://community.airtable.com/show-and-tell-15/we-build-an-ios-shortcut-for-saving-email-attachments-to-airtable-2407", cat:"iOS & Apple Tools", rel:"Low", os:false, summary:"Guide for building an iOS Shortcut that saves email attachments directly to Airtable. Data ingestion workflow reference.", howto:"Adapt pattern for saving inspection attachments to Sandpitt" },
+  { name:"AI File Renaming (Beard.fm)", url:"https://wiki.beard.fm/whats-new-ai-social-search-personal-knowledge-base-smart-fil/deep-dive-into-renaming-files-with-ai", cat:"iOS & Apple Tools", rel:"Low", os:false, summary:"Deep-dive on using AI to intelligently rename files — NLP-powered file organization patterns.", howto:"Reference for Sandpitt photo/document naming automation" },
+
+  // ── CATEGORY 17: VPS Providers ───────────────────────────────────────────
+  { name:"Contabo VPS", url:"https://contabo.com/en/", cat:"Hosting Providers & VPS", rel:"High", os:false, summary:"Budget VPS and dedicated server provider — European, unlimited bandwidth, generous resources at low prices. Best price/resource ratio for Sandpitt production hosting.", howto:"Sign up; select VPS S or M; deploy CapRover or Dokploy" },
+  { name:"IONOS Cloud", url:"https://www.ionos.com/", cat:"Hosting Providers & VPS", rel:"High", os:false, summary:"Web hosting and cloud provider — shared hosting, VPS, cloud servers, multiple data centers globally. Good alternative to Contabo with better SLA.", howto:"Sign up; select VPS or cloud server; configure Sandpitt stack" },
+  { name:"Northflank (Managed)", url:"https://northflank.com/", cat:"Hosting Providers & VPS", rel:"Medium", os:false, summary:"Managed container deployment platform. See Self-Hosting category for full details. More expensive but requires no server management.", howto:"Sign up; deploy containers from GitHub" },
+
+  // ── CATEGORY 18: Miscellaneous ────────────────────────────────────────────
+  { name:"Netflix Redirect", url:"https://www.netflix.com/tv/out/success", cat:"Miscellaneous / Not Relevant", rel:"None", os:false, summary:"Netflix TV redirect/confirmation page. Entertainment — no tech relevance to Sandpitt.", howto:"N/A" },
+  { name:"Chemist Warehouse — Eye Ointment", url:"https://www.chemistwarehouse.com.au/buy/2223/chlorsig-eye-ointment-4g-chloramphenicol-s3", cat:"Miscellaneous / Not Relevant", rel:"None", os:false, summary:"Australian pharmacy product page for eye ointment. Personal health purchase — not tech-related.", howto:"N/A" },
+  { name:"Transport WA — Vehicle Registration", url:"https://online.transport.wa.gov.au/webExternal/registration/wicket/page?1", cat:"Miscellaneous / Not Relevant", rel:"None", os:false, summary:"Western Australia vehicle registration portal. Government service — personal use only.", howto:"N/A" },
+  { name:"AliExpress — Product Listing", url:"https://www.aliexpress.com/item/1005007171594211.html", cat:"Miscellaneous / Not Relevant", rel:"None", os:false, summary:"AliExpress shopping product listing. Personal shopping — no tech relevance.", howto:"N/A" },
+  { name:"Paramount+ — Lioness TV Show", url:"https://www.paramountplus.com/au/shows/lioness/", cat:"Miscellaneous / Not Relevant", rel:"None", os:false, summary:"TV show page on Paramount+ Australia. Entertainment — no tech relevance.", howto:"N/A" },
+  { name:"Lifeblood — Rockingham Donor Centre", url:"https://www.lifeblood.com.au/donor-centre/wa/rockingham-donor-centre", cat:"Miscellaneous / Not Relevant", rel:"None", os:false, summary:"Australian Red Cross blood donation centre location page. Personal health — not tech-related.", howto:"N/A" },
+  { name:"RenewEconomy — Coal Plant Demo", url:"https://reneweconomy.com.au/another-boiler-at-shuttered-coal-power-plant-demolished-in-spectacular-explosion/amp/", cat:"Miscellaneous / Not Relevant", rel:"None", os:false, summary:"News article about coal plant demolition. Unrelated news — no tech relevance.", howto:"N/A" },
+  { name:"Pocket-lint — Apple Wallet Tracking", url:"https://www.pocket-lint.com/apple-wallet-order-tracking-just-got-so-much-better/", cat:"Miscellaneous / Not Relevant", rel:"None", os:false, summary:"Article about improvements to order tracking in Apple Wallet. Consumer tech news — not relevant to Sandpitt.", howto:"N/A" },
+];
+
+// ── Build category list ──────────────────────────────────────────────────────
+const CATS = ['All', ...Array.from(new Set(LINKS.map(l => l.cat)))];
+const REL_FILTERS = ['All Relevance', 'Very High', 'High', 'Medium', 'Low', 'None'];
+const OPEN_SOURCE_FILTERS = ['All', 'Open Source Only'];
+
+let activeCategory = 'All';
+let activeRel = 'All Relevance';
+let activeOS = 'All';
+let searchQuery = '';
+let sortMode = 'default';
+
+function relClass(rel) {
+  return 'rel-' + rel.toLowerCase().replace(' ', '-');
+}
+
+function filteredLinks() {
+  let items = LINKS.slice();
+  if (activeCategory !== 'All') items = items.filter(l => l.cat === activeCategory);
+  if (activeRel !== 'All Relevance') items = items.filter(l => l.rel === activeRel);
+  if (activeOS === 'Open Source Only') items = items.filter(l => l.os);
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    items = items.filter(l =>
+      l.name.toLowerCase().includes(q) ||
+      l.summary.toLowerCase().includes(q) ||
+      l.url.toLowerCase().includes(q) ||
+      l.cat.toLowerCase().includes(q)
+    );
+  }
+  if (sortMode === 'rel-desc') items.sort((a,b) => (REL_ORDER[b.rel]||0)-(REL_ORDER[a.rel]||0));
+  else if (sortMode === 'az') items.sort((a,b) => a.name.localeCompare(b.name));
+  else if (sortMode === 'cat') items.sort((a,b) => a.cat.localeCompare(b.cat) || a.name.localeCompare(b.name));
+  return items;
+}
+
+function countForCat(cat) {
+  let items = LINKS.slice();
+  if (cat !== 'All') items = items.filter(l => l.cat === cat);
+  if (activeRel !== 'All Relevance') items = items.filter(l => l.rel === activeRel);
+  if (activeOS === 'Open Source Only') items = items.filter(l => l.os);
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    items = items.filter(l =>
+      l.name.toLowerCase().includes(q) ||
+      l.summary.toLowerCase().includes(q) ||
+      l.url.toLowerCase().includes(q) ||
+      l.cat.toLowerCase().includes(q)
+    );
+  }
+  return items.length;
+}
+
+function renderSidebar() {
+  const sb = document.getElementById('sidebar');
+  let html = `<div class="sidebar-section">Categories</div>`;
+  CATS.forEach(cat => {
+    const c = countForCat(cat);
+    html += `<button class="filter-btn ${activeCategory===cat?'active':''}" onclick="setCategory('${cat.replace(/'/g,"\\'")}')">
+      <span>${cat==='All'?'All Links':cat}</span>
+      <span class="count">${c}</span>
+    </button>`;
+  });
+  html += `<div class="divider"></div><div class="sidebar-section">Relevance</div>`;
+  const relColors = {
+    'Very High':'#22c55e','High':'#86efac','Medium':'#f59e0b','Low':'#64748b','None':'#ef4444'
+  };
+  REL_FILTERS.forEach(r => {
+    html += `<button class="filter-btn ${activeRel===r?'active':''}" onclick="setRel('${r}')">
+      <span>${r==='All Relevance'?'All Relevance':''}${r!=='All Relevance'?`<span class="rel-dot" style="background:${relColors[r]||'#888'}"></span>${r}`:''}</span>
+    </button>`;
+  });
+  html += `<div class="divider"></div><div class="sidebar-section">Filter</div>`;
+  OPEN_SOURCE_FILTERS.forEach(f => {
+    html += `<button class="filter-btn ${activeOS===f?'active':''}" onclick="setOS('${f}')">
+      <span>${f}</span>
+    </button>`;
+  });
+  sb.innerHTML = html;
+}
+
+function renderGrid() {
+  const items = filteredLinks();
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('empty');
+  document.getElementById('shown-count').textContent = items.length;
+  document.getElementById('total-count').textContent = LINKS.length;
+  const label = activeCategory === 'All' ? 'All categories' : activeCategory;
+  document.getElementById('results-label').textContent = `${items.length} result${items.length!==1?'s':''} — ${label}`;
+
+  if (items.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML = items.map((l, i) => {
+    const domain = (() => { try { return new URL(l.url).hostname.replace('www.',''); } catch(e){return '';} })();
+    const hasHowTo = l.howto && l.howto !== 'N/A';
+    return `<div class="card" id="card-${i}">
+      <div class="card-header">
+        <div class="card-title"><a href="${l.url}" target="_blank" rel="noopener">${l.name}</a></div>
+        <span class="rel-badge ${relClass(l.rel)}">${l.rel}</span>
+      </div>
+      <div class="card-summary collapsed" id="sum-${i}">${l.summary}</div>
+      <button class="expand-btn" onclick="toggleExpand(${i})">Show more</button>
+      ${hasHowTo ? `<div class="how-to">▶ ${l.howto}</div>` : ''}
+      <div class="card-footer">
+        <span class="cat-tag">${l.cat}</span>
+        ${l.os ? '<span class="os-badge">Open Source</span>' : ''}
+        <button class="copy-btn" onclick="copyURL(this, '${l.url.replace(/'/g,"\\'")}')">Copy URL</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleExpand(i) {
+  const sum = document.getElementById('sum-'+i);
+  const btn = sum.nextElementSibling;
+  if (sum.classList.contains('collapsed')) {
+    sum.classList.remove('collapsed');
+    btn.textContent = 'Show less';
+  } else {
+    sum.classList.add('collapsed');
+    btn.textContent = 'Show more';
+  }
+}
+
+function copyURL(btn, url) {
+  navigator.clipboard.writeText(url).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy URL'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+function setCategory(cat) { activeCategory = cat; render(); }
+function setRel(r) { activeRel = r; render(); }
+function setOS(f) { activeOS = f; render(); }
+
+function render() {
+  renderSidebar();
+  renderGrid();
+}
+
+document.getElementById('search').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  render();
+});
+document.getElementById('sort-select').addEventListener('change', e => {
+  sortMode = e.target.value;
+  render();
+});
+
+document.getElementById('total-count').textContent = LINKS.length;
+render();
+</script>
+</body>
+</html>
