@@ -370,7 +370,7 @@ const LINKS = [
 ];
 
 // ── Build category list ──────────────────────────────────────────────────────
-const CATS = ['All', ...Array.from(new Set(LINKS.map(l => l.cat)))];
+const CATS = ['All', ...Array.from(new Set([...LINKS.map(l => l.cat), ...LINKS.flatMap(l => l.cats||[])]))];
 const REL_FILTERS = ['All Relevance', 'Very High', 'High', 'Medium', 'Low', 'None'];
 const OPEN_SOURCE_FILTERS = ['All', 'Open Source Only'];
 
@@ -386,7 +386,7 @@ function relClass(rel) {
 
 function filteredLinks() {
   let items = LINKS.slice();
-  if (activeCategory !== 'All') items = items.filter(l => l.cat === activeCategory);
+  if (activeCategory !== 'All') items = items.filter(l => l.cat === activeCategory || (l.cats && l.cats.includes(activeCategory)));
   if (activeRel !== 'All Relevance') items = items.filter(l => l.rel === activeRel);
   if (activeOS === 'Open Source Only') items = items.filter(l => l.os);
   if (searchQuery) {
@@ -406,7 +406,7 @@ function filteredLinks() {
 
 function countForCat(cat) {
   let items = LINKS.slice();
-  if (cat !== 'All') items = items.filter(l => l.cat === cat);
+  if (cat !== 'All') items = items.filter(l => l.cat === cat || (l.cats && l.cats.includes(cat)));
   if (activeRel !== 'All Relevance') items = items.filter(l => l.rel === activeRel);
   if (activeOS === 'Open Source Only') items = items.filter(l => l.os);
   if (searchQuery) {
@@ -478,6 +478,7 @@ function renderGrid() {
       ${hasHowTo ? `<div class="how-to">▶ ${l.howto}</div>` : ''}
       <div class="card-footer">
         <span class="cat-tag">${l.cat}</span>
+        ${l.cats && l.cats.length ? l.cats.map(c => `<span class="cat-tag">${c}</span>`).join('') : ''}
         ${l.os ? '<span class="os-badge">Open Source</span>' : ''}
         <button class="copy-btn" onclick="copyURL(this, '${l.url.replace(/'/g,"\\'")}')">Copy URL</button>
       </div>
